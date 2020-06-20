@@ -16,7 +16,7 @@ var bodyParser = require('body-parser');
 var app = express();
 var MongoClient = require('mongodb').MongoClient;
 var ObjectID = require('mongodb').ObjectID;
-/*
+
 var db;
 
 
@@ -35,9 +35,10 @@ var init = () => {
 };
 init();    
 
-*/
+
 
 /*** db rellenado*/
+/*
 var db ={};
 
 db = {
@@ -134,7 +135,7 @@ db = {
         playlists: {}
     },
 }
-
+*/
 /** fin db */
 
 /**** AUTENTIFICACIÓN */
