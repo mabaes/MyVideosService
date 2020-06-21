@@ -10,6 +10,7 @@ app.listen(8087);
 console.log('HTTP server running');
 */
 //https://manuelfrancoblog.wordpress.com/2017/09/13/mongodb-arreglos-o-listas/
+//https://charlascylon.com/2013-07-25-tutorial-mongodb-operaciones-de-actualizaci%C3%B3n-de-ii
 
 var express = require('express');
 var bodyParser = require('body-parser');
@@ -25,7 +26,7 @@ var init = () => {
     var url = 'mongodb://localhost:27017/myvideos';
     console.log('- connecting to dabatase');
     ////// test /////////
-    /*
+    
     var video = {                                
         "type": 'hola',
         "url": 'url', "title": 'sdas', "date": 'asdas'
@@ -33,7 +34,8 @@ var init = () => {
     var additem = {
         "id":"asdasdsada"
     }
-    */
+    console.log(video.url);
+   /*
     var usuario = [ { 
         "_id": "5eedd7d09fc452376cf5a471",
         "email": "pau@caracola.com",
@@ -44,6 +46,7 @@ var init = () => {
         videos: [ "5eee33f4cc921c1530cfc9f6", "5eee3a7882c7af3c98f0bf10" ] } ];
     //var tmp = JSON.parse(usuario);
     console.log (usuario[0]['videos']);
+    */
 
     ////// end test /////
     MongoClient.connect(url, (err, _db) => {
@@ -767,67 +770,145 @@ app.delete('/myvideos/users/:userId/playlists/:playlistId', function (req, res) 
 
 
 /*** FALTA REVISAR A PARTIR DE AQUI */
+/**Actualizado*/
 app.post('/myvideos/users/:userId/playlists/:playlistId/videos', function (req, res) {
     console.log('POST /myvideos/users/' + req.params.userId + '/playlists/' +
         req.params.playlistId + '/videos');
     var userId = req.params.userId;
     var playlistId = req.params.playlistId;
     if (!userId || !playlistId) res.send(400, 'Missing parameter');
-    else if (!db[userId]) res.send(404, 'User not found');
-    else if (!req.body.id || !req.body.type) res.send(400, 'Missing data');
-    else if (!db[userId].playlists[playlistId])
-        res.send(404, 'Playlist not found');
     else {
-        db[userId].playlists[playlistId].idVideos[req.body.id] = {
-            id: req.body.id,
-            type: req.body.type
-        };
-        res.send(204);
-    }
+            _playlistId = [ObjectID.createFromHexString(playlistId)];
+            db.collection('users').findOne({ 
+                _id: ObjectID.createFromHexString(userId), playlists: {$in: _playlistId} }, (err, doc) => {
+                if (err) res.send(500);
+                else if (!doc) res.send(404, 'User or Playlist not found');
+                else {
+                    var video = {
+                        id : req.body.id,
+                        type: req.body.type,
+                        url: req.body.url, 
+                        title: req.body.title, 
+                    };
+                    if (req.body.description) video.description = req.body.description;
+                    if (req.body.thumbnail) video.thumbnail = req.body.thumbnail;
+                    if (req.body.tags) video.tags = req.body.tags;
+                    if (req.body.width) video.width = req.body.width;
+                    if (req.body.height) video.height = req.body.height;
+                    if (req.body.duration) video.height = req.body.duration;
+                    console.log(video.id);                    
+                    db.collection('playlists').updateOne(
+                        { _id: ObjectID.createFromHexString(playlistId) },
+                        { $addToSet: { idVideos : ObjectID.createFromHexString(video.id) } },
+                        (err, doc) => {
+                            if (err) res.send(500, err);
+                            else res.send(204);
+                        });
+                    
+                }
+            });
+        }
 });
 
 
-/** ojo la modificamos nosotros */
+/** OK actualizado revisar que para youtube envía el id y tipo */
 app.get('/myvideos/users/:userId/playlists/:playlistId/videos', function (req, res) {
     console.log('GET /myvideos/users/' + req.params.userId + '/playlists/' +
         req.params.playlistId + '/videos');
     var userId = req.params.userId;
     var playlistId = req.params.playlistId;
     if (!userId || !playlistId) res.send(400, 'Missing parameter');
-    else if (!db[userId]) res.send(404, 'User not found');
-    else if (!db[userId].playlists[playlistId])
-        res.send(404, 'Playlist not found');
     else {
-        var videos = [];
-        for (var id in db[userId].playlists[playlistId].idVideos) {
-            if (db[userId].playlists[playlistId].idVideos[id].type === 'local') {
-                videos.push(db[userId].videos[id]);
-            }
+        _playlistId = [ObjectID.createFromHexString(playlistId)];
+        db.collection('users').findOne({ 
+            _id: ObjectID.createFromHexString(userId), playlists: {$in: _playlistId} }, (err, doc) => {
+            if (err) res.send(500);
+            else if (!doc) res.send(404, 'User or Playlist not found');
             else {
-                videos.push(db[userId].playlists[playlistId].idVideos[id]);
-                //res.send(db[userId].playlists[playlistId].idVideos[id]);
-            }
-        }
-        res.send(videos);
-    }
+                ////////////////////////////////////////////////
+                ///////////////////////////////////////////////////////////
+                db.collection('playlists').find({ _id: ObjectID.createFromHexString(playlistId) }).toArray((err, doc) => {    
+                    if (err) res.send(500);
+                    else if (!doc) res.send(404, 'Playlist not found');
+                    else {
+                            _idVideos = doc[0]['idVideos'];
+                            var _parametros = {                                
+                                _id: {$in:_idVideos}                        
+                            };
+                                /*console.log(_parametros);
+                                console.log('videos: ');
+                                console.log(doc);
+                                console.log(doc[0]['idVideos']);
+                                console.log(typeof(doc[0]['videos']));
+                                */
+                                db.collection('videos').find(_parametros).toArray((err, docs) => {    
+                                    if (err) res.send(500);
+                                    else res.send(docs.map((doc) => {
+                                        //console.log(docs);
+                                        if (doc.type=='local') {
+                                            video = {
+                                                id: doc._id.toHexString(), 
+                                                type: doc.type, 
+                                                url: doc.url,
+                                                title: doc.title,
+                                                description:doc.description,
+                                                thumbnail : doc.thumbnail,
+                                                tags: doc.tags,
+                                                duration:doc.duration,
+                                                date:doc.date,
+                                                width:doc.width,
+                                                height:doc.height
+                                            };
+                                        }
+                                        else {
+                                            video = {
+                                                id: doc._id.toHexString(), 
+                                                type: doc.type 
+                                            }
+                                        }
+                                        
+                                        return video;
+                                    }));
+                                });
+                    } //end else
+                });
+
+                //////////////////////////////////////////////////////////
+                ////////////////////////////////////////////////
+            } //end else
+        });
+    } //else
+   
 });
 
 
 
+/** Ok actualizado revisar si borrar un video definitivamente / al igual que la playlist */
 app.delete('/myvideos/users/:userId/playlists/:playlistId/videos/:videoId', function (req, res) {
     console.log('GET /myvideos/users/' + req.params.userId + '/playlists/' + req.params.playlistId + '/videos/' + req.params.videoId);
     var userId = req.params.userId;
     var playlistId = req.params.playlistId;
     var videoId = req.params.videoId;
-    if (!userId || !playlistId || !videoId) res.send(400, 'Missing parameter');
-    else if (!db[userId]) res.send(404, 'User not found');
-    else if (!db[userId].playlists[playlistId])
-        res.send(404, 'Playlist not found');
-    else if (!db[userId].playlists[playlistId].idVideos[videoId])
-        res.send(404, 'Video not found');
+    if (!userId || !playlistId) res.send(400, 'Missing parameter');
     else {
-        delete db[userId].playlists[playlistId].idVideos[videoId];
-        res.send(204);
+        _playlistId = [ObjectID.createFromHexString(playlistId)];
+        db.collection('users').findOne({
+            _id: ObjectID.createFromHexString(userId), playlists: { $in: _playlistId }
+        }, (err, doc) => {
+            if (err) res.send(500);
+            else if (!doc) res.send(404, 'User or Playlists not found');
+            else {
+                db.collection('playlists').updateOne(
+                    { _id: ObjectID.createFromHexString(playlistId) },
+                    { $pull: { idVideos : ObjectID.createFromHexString(videoId) } },
+                    (err, doc) => {
+                        if (err) res.send(500, err);
+                        else res.send(204);
+                    });
+
+            }
+        });
+
     }
 });
 
