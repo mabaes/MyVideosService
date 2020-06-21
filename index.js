@@ -191,12 +191,14 @@ app.use(function (req, res, next) {
     } else if (!req.query.token) {
         res.send(401, 'Token missing');
     } else {
+        _token = req.query.token.toString().trim();
+        if(!ObjectID.isValid(_token)) res.send(401, 'Invalid token.');
         db.collection('users').findOne(
-            { _id: ObjectID.createFromHexString(req.query.token) },
+            { _id: ObjectID.createFromHexString(_token) },
             (err, doc) => {
                 if (err) res.send(500);
                 else if (!doc) res.send(401, 'Invalid token');
-                else next();
+                else next();                
             });
     }
 });
@@ -343,7 +345,6 @@ app.delete('/myvideos/users/:userId', function (req, res) {
 //*************sin pasar a DB ****/// */
 
 /** OK Actualizado */
-
  app.get('/myvideos/users/:userId/videos', function (req, res) {
     console.log('GET /myvideos/user/' + req.params.userId + '/videos');
     var userId = req.params.userId;
@@ -361,12 +362,9 @@ app.delete('/myvideos/users/:userId', function (req, res) {
                     res.send(400, 'Missing data');
                 } else {
                     _videos = doc[0]['videos'];
-                    //////////////////////////////////
                     var _parametros = {                                
                         _id: {$in:_videos}                        
                     };
-                    
-                    //////////////////////////////////
                     if (_query) {
                         _parametros.title = {'$regex': _query}
                     }
@@ -459,55 +457,114 @@ app.post('/myvideos/users/:userId/videos', function (req, res) {
 });
 
 
-
+/*OK Actualizado */
 app.get('/myvideos/users/:userId/videos/:videoId', function (req, res) {
     console.log('GET /myvideos/users/' + req.params.userId + '/videos/' +
         req.params.videoId);
     var userId = req.params.userId;
     var videoId = req.params.videoId;
+    console.log('video' + videoId);
     if (!userId || !videoId) res.send(400, 'Missing parameter');
-    else if (!db[userId]) res.send(404, 'User not found');
-    else if (!db[userId].videos[videoId]) res.send(404, 'Video not found');
-    else res.send(db[userId].videos[index]);
-});
+    else {
+        db.collection('users').findOne({ _id: ObjectID.createFromHexString(userId) }, (err, doc) => {
+            if (err) res.send(500);
+            else if (!doc) res.send(404, 'User not found');
+            else {
+                db.collection('videos').find({ _id: ObjectID.createFromHexString(videoId) }).toArray((err, docs) => {
+                    if (err) res.send(500);
+                    else if (!docs) res.send(404, 'Video not found');
+                    else {
+                        res.send(docs.map((doc) => {
 
+                            var video = {
+                                id: doc._id.toHexString(),
+                                type: doc.type,
+                                url: doc.url,
+                                title: doc.title,
+                                description: doc.description,
+                                thumbnail: doc.thumbnail,
+                                tags: doc.tags,
+                                duration: doc.duration,
+                                date: doc.date,
+                                width: doc.width,
+                                height: doc.height
+                            };
+                            return video;
+                        }));
+                    }
+                });
+            } //end else
+        });
+    }
+});   
+
+
+/** OK Actuallzado */
 app.put('/myvideos/users/:userId/videos/:videoId', function (req, res) {
     console.log('PUT /myvideos/users/' + req.params.userId + '/videos/' +
         req.params.videoId);
     var userId = req.params.userId;
     var videoId = req.params.videoId;
     if (!userId || !videoId) res.send(400, 'Missing parameter');
-    else if (!db[userId]) res.send(404, 'User not found');
-    else if (!db[userId].videos[videoId]) res.send(404, 'Video not found');
     else {
-        if (req.body.type) db[userId].videos[videoId].type = req.body.type;
-        if (req.body.url) db[userId].videos[videoId].url = req.body.url;
-        if (req.body.title) db[userId].videos[videoId].title = req.body.title;
-        if (req.body.description)
-            db[userId].videos[videoId].description = req.body.description;
-        if (req.body.thumbnail)
-            db[userId].videos[videoId].thumbnail = req.body.thumbnail;
-        if (req.body.tags) db[userId].videos[videoId].tags = req.body.tags;
-        if (req.body.width) db[userId].videos[videoId].width = req.body.width;
-        if (req.body.height) db[userId].videos[videoId].height = req.body.height;
-        res.send(db[userId].videos[videoId]);
+        _videoId = [ObjectID.createFromHexString(videoId)];//5eee3a7882c7af3c98f0bf10
+        db.collection('users').findOne({ 
+            _id: ObjectID.createFromHexString(userId), videos: {$in: _videoId} }, (err, doc) => {
+            if (err) res.send(500);
+            else if (!doc) res.send(404, 'User or Video not found');
+            else {
+                var video = {
+                    type: req.body.type,
+                    url: req.body.url, title: req.body.title, date: Date.now()
+                };
+                if (req.body.description) video.description = req.body.description;
+                if (req.body.thumbnail) video.thumbnail = req.body.thumbnail;
+                if (req.body.tags) video.tags = req.body.tags;
+                if (req.body.width) video.width = req.body.width;
+                if (req.body.height) video.height = req.body.height;
+                db.collection('videos').updateOne(
+                    { _id: ObjectID.createFromHexString(videoId) },
+                    { $set: video },
+                    (err, doc) => {
+                        if (err) res.send(500, err);
+                        else res.send(video);
+                    });
+            }
+        });
     }
 });
 
 
+
+/**Ok Actualizado */
 app.delete('/myvideos/users/:userId/videos/:videoId', function (req, res) {
     console.log('DELETE /myvideos/users/' + req.params.userId + '/videos/' +
         req.params.videoId);
     var userId = req.params.userId;
     var videoId = req.params.videoId;
     if (!userId || !videoId) res.send(400, 'Missing parameter');
-    else if (!db[userId]) res.send(404, 'User not found');
-    else if (!db[userId].videos[videoId]) res.send(404, 'Video not found');
     else {
-        delete db[userId].videos[videoId];
-        res.send(204);
+        _videoId = [ObjectID.createFromHexString(videoId)];//5eee3a7882c7af3c98f0bf10
+        db.collection('users').findOne({
+            _id: ObjectID.createFromHexString(userId), videos: { $in: _videoId }
+        }, (err, doc) => {
+            if (err) res.send(500);
+            else if (!doc) res.send(404, 'User or Video not found');
+            else {
+                db.collection('users').updateOne(
+                    { _id: ObjectID.createFromHexString(userId) },
+                    { $pull: { videos : ObjectID.createFromHexString(videoId) } },
+                    (err, doc) => {
+                        if (err) res.send(500, err);
+                        else res.send(204);
+                    });
+
+            }
+        });
+
     }
 });
+
 
 
 // ********************* *****************/
@@ -538,32 +595,54 @@ app.get('/myvideos/users/:userId/playlists', function (req, res) {
     }
 });
 
-
+/** Ok actualizado */
 app.post('/myvideos/users/:userId/playlists', function (req, res) {
     console.log('POST /myvideos/user/' + req.params.userId + '/playlists');
-    console.log(req);
     var userId = req.params.userId;
     if (!userId) res.send(400, 'Missing parameter');
-    else if (!db[userId]) res.send(404, 'User not found');
-    else if (!req.body.title || !req.body.description)
-        res.send(400, 'Missing data');
     else {
-        var playlist = {
-            id: String(Date.now()), title: req.body.title,
-            description: req.body.description,
-            date: Date.now(),
-            idVideos: {}
-        };
-        if (req.body.thumbnail) playlist.thumbnail = req.body.thumbnail;
-        db[userId].playlists[playlist.id] = playlist;
-        var ret = {
-            id: playlist.id, title: playlist.title,
-            description: playlist.description, date: playlist.date
-        };
-        if (playlist.thumbnail) ret.thumbnail = playlist.thumbnail;
-        res.send(ret);
+        _user = userId.trim();
+        console.log(_user);
+        db.collection('users').findOne({ _id: ObjectID.createFromHexString(userId) }, (err, doc) => {
+            if (err) res.send(500);
+            else if (!doc) res.send(404, 'User not found');
+            else if (!req.body.title || !req.body.description)
+                res.send(400, 'Missing data');
+                else {
+                    var playlist = {
+                        title: req.body.title,
+                        description: req.body.description,
+                        date: Date.now(),
+                        //idVideos: {}
+                    };
+                    if (req.body.thumbnail) playlist.thumbnail = req.body.thumbnail;
+                    var ret = {
+                        id: playlist.id, title: playlist.title,
+                        description: playlist.description, date: playlist.date
+                    };
+                    //////////////////////////////////////////////////////////////
+                    db.collection('playlists').insertOne(playlist, (err, result) => {
+                        if (err) res.send(500);
+                        else  {
+                            _playlistId =result.insertedId.toHexString();
+                            //video.id = _videoId;
+                            db.collection('users').updateOne(
+                                { _id: ObjectID.createFromHexString(userId) },
+                                { $addToSet: { playlists : result.insertedId } },
+                                (err, doc) => {
+                                    if (err) res.send(500, err);
+                                    else res.send(playlist);
+                                });
+                        }
+                    });
+                    ///////////////////////////////////////////////////////////////
+
+                } //end else
+        });
     }
+    
 });
+
 
 /** identificar esta api */
 app.get('/myvideos/users/:userId/playlists/:playlistId', function (req, res) {
