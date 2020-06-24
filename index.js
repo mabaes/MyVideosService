@@ -11,6 +11,9 @@ console.log('HTTP server running');
 */
 //https://manuelfrancoblog.wordpress.com/2017/09/13/mongodb-arreglos-o-listas/
 //https://charlascylon.com/2013-07-25-tutorial-mongodb-operaciones-de-actualizaci%C3%B3n-de-ii
+//https://carlosazaustre.es/autenticacion-con-token-en-node-js
+//-->https://code.tutsplus.com/es/tutorials/jwt-authentication-in-angular--cms-32006
+//-->https://medium.com/@asfo/autenticando-un-api-rest-con-nodejs-y-jwt-json-web-tokens-5f3674aba50e
 
 var express = require('express');
 var bodyParser = require('body-parser');
@@ -18,6 +21,9 @@ var bodyParser = require('body-parser');
 var app = express();
 var MongoClient = require('mongodb').MongoClient;
 var ObjectID = require('mongodb').ObjectID;
+
+var jwt = require('jsonwebtoken');
+var JWT_Secret = 'curso_web_app_key';
 
 var db;
 
@@ -193,6 +199,8 @@ app.use(bodyParser.json({ limit: '50mb', extended: true }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 
+
+
 app.use(function (req, res, next) {
     console.log(req.method + ':' + req.url);
     if (!req.url.startsWith('/myvideos') ||
@@ -200,18 +208,53 @@ app.use(function (req, res, next) {
         (req.url === '/myvideos/users' && req.method === 'POST')) {
         next();
     } else if (!req.query.token) {
-        res.send(401, 'Token missing');
+        res.send(401, 'Token missing.');
     } else {
-        _token = req.query.token.toString().trim();
+        //_token = req.query.token.toString().trim();
+        _token = req.query.token;
+        /*
         if(!ObjectID.isValid(_token)) res.send(401, 'Invalid token.');
-        db.collection('users').findOne(
+        */
+       ///////////////////////////// nuevo //////////////////////////////////
+       jwt.verify(_token, 'secret', (err, decoded) => {      
+            if (err) {
+                res.send(401, 'Token not valid.');
+            } else {
+                //console.log('id_user::');
+                //console.log(decoded._id);
+                _idUser = decoded._id;
+                if(!ObjectID.isValid(_idUser)) res.send(401, 'Invalid token.');
+                db.collection('users').findOne(
+                    { _id: ObjectID.createFromHexString(_idUser) },
+                        (err, doc) => {
+                            if (err) res.send(500);
+                                else if (!doc) res.send(401, 'user and token not valid');
+                            else next();                
+                    });
+                //next();
+            }
+         });
+       ///////////////////////// fin nuevo /////////////////////////////////
+       /////////////// test ////////////////////////////////////////////////
+       /*
+       //JWT.verify(req.cookies['token'], 'YOUR_SECRET', function(err, decodedToken) {
+       // if(err) { /* handle token err */ }
+       // else {
+       //  req.userId = decodedToken.id;   // Add to req object
+       //  next();
+       // }
+      //});
+       ///////////// end test /////////////////////////////////////////////
+       
+       /*db.collection('users').findOne(
             { _id: ObjectID.createFromHexString(_token) },
             (err, doc) => {
                 if (err) res.send(500);
                 else if (!doc) res.send(401, 'Invalid token');
                 else next();                
             });
-    }
+            */
+    //}
 });
 
 
@@ -230,10 +273,18 @@ app.post('/myvideos/sessions', function (req, res) {
                 console.log(doc);
                 if (err) res.send(500);
                 else if (!doc) res.send(401);
-                else res.send({
-                    userId: doc._id.toHexString(),
-                    token: doc._id.toHexString()
-                });
+                else {
+                    let payload = { "_id" : doc._id.toHexString()};
+                    let _token = jwt.sign( payload,'secret',  { noTimestamp:true, expiresIn: '1h' });
+                    res.send({
+                        userId: doc._id.toHexString(),
+                        token : _token
+                    });
+                }
+                //else res.send({
+                //    userId: doc._id.toHexString(),
+                //    token: doc._id.toHexString()
+                //});
             });
     }
 });
@@ -886,6 +937,7 @@ app.post('/myvideos/users/:userId/playlists/:playlistId/videos', function (req, 
 */
 
 /** OK actualizado  */
+/** controlar que el video no es null */
 app.get('/myvideos/users/:userId/playlists/:playlistId/videos', function (req, res) {
     console.log('GET /myvideos/users/' + req.params.userId + '/playlists/' +
         req.params.playlistId + '/videos');
@@ -907,9 +959,14 @@ app.get('/myvideos/users/:userId/playlists/:playlistId/videos', function (req, r
                     else if (!doc) res.send(404, 'Playlist not found');
                     else {
                         _idVideos = doc[0]['idVideos'];
+                        console.log(_idVideos);
                         _idVideosObj = [];
                         for (let _idVideo of _idVideos) {
-                            _idVideosObj.push (ObjectID.createFromHexString(_idVideo.id));
+                            if(ObjectID.isValid(_idVideo.id)) {
+                                console.log('es valido');
+                                console.log(_idVideo.id);
+                                _idVideosObj.push (ObjectID.createFromHexString(_idVideo.id));
+                            }
                             
                         } //for
                         var _parametros = {
