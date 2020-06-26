@@ -216,7 +216,7 @@ app.use(function (req, res, next) {
         if(!ObjectID.isValid(_token)) res.send(401, 'Invalid token.');
         */
        ///////////////////////////// nuevo //////////////////////////////////
-       jwt.verify(_token, 'secret', (err, decoded) => {      
+       jwt.verify(_token, JWT_Secret, (err, decoded) => {      
             if (err) {
                 res.send(401, 'Token not valid.');
             } else {
@@ -275,7 +275,7 @@ app.post('/myvideos/sessions', function (req, res) {
                 else if (!doc) res.send(401);
                 else {
                     let payload = { "_id" : doc._id.toHexString()};
-                    let _token = jwt.sign( payload,'secret',  { noTimestamp:true, expiresIn: '1h' });
+                    let _token = jwt.sign( payload,JWT_Secret,  { noTimestamp:true, expiresIn: '1h' });
                     res.send({
                         userId: doc._id.toHexString(),
                         token : _token
@@ -599,6 +599,7 @@ app.put('/myvideos/users/:userId/videos/:videoId', function (req, res) {
 
 
 /**Ok Actualizado */
+/** elimina un video tb de las playlists que está asociado */
 app.delete('/myvideos/users/:userId/videos/:videoId', function (req, res) {
     console.log('DELETE /myvideos/users/' + req.params.userId + '/videos/' +
         req.params.videoId);
@@ -615,10 +616,30 @@ app.delete('/myvideos/users/:userId/videos/:videoId', function (req, res) {
             else {
                 db.collection('users').updateOne(
                     { _id: ObjectID.createFromHexString(userId) },
-                    { $pull: { videos : ObjectID.createFromHexString(videoId) } },
+                    { $pull: { videos: ObjectID.createFromHexString(videoId) } },
                     (err, doc) => {
                         if (err) res.send(500, err);
-                        else res.send(204);
+                        //else res.send(204);
+                        else {
+                            db.collection('playlists').update(
+                                {},
+                                { $pull: { idVideos: { id: ObjectID.createFromHexString(videoId) } } },
+                                (err, doc) => {
+                                    if (err) res.send(500, err);
+                                    else {
+                                        //////////////
+                                        db.collection('videos').remove({ _id: ObjectID.createFromHexString(videoId) },
+                                            (err, doc) => {
+                                                if (err) res.send(500, err);
+                                                else res.send(204);
+                                            }
+                                        );
+                                        //////////////////////
+                                    }
+                                });
+
+                        } // end else
+
                     });
 
             }
@@ -818,7 +839,17 @@ app.delete('/myvideos/users/:userId/playlists/:playlistId', function (req, res) 
                     { $pull: { playlists : ObjectID.createFromHexString(playlistId) } },
                     (err, doc) => {
                         if (err) res.send(500, err);
-                        else res.send(204);
+                        //else res.send(204);
+                        else {
+                            ////////////////////////////
+                            db.collection('playlists').remove({ _id: ObjectID.createFromHexString(playlistId) },
+                                            (err, doc) => {
+                                                if (err) res.send(500, err);
+                                                else res.send(204);
+                                            }
+                                        );
+                            ////////////////////////////
+                        }
                     });
 
             }
