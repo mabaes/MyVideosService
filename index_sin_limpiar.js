@@ -32,35 +32,35 @@ var init = () => {
     var url = 'mongodb://localhost:27017/myvideos';
     console.log('- connecting to dabatase');
     ////// test /////////
-
-    var video = {
+    
+    var video = {                                
         "type": 'hola',
         "url": 'url', "title": 'sdas', "date": 'asdas'
     };
     var additem = {
-        "id": "asdasdsada"
+        "id":"asdasdsada"
     }
     console.log(video.url);
-    /*
-     var usuario = [ { 
-         "_id": "5eedd7d09fc452376cf5a471",
-         "email": "pau@caracola.com",
-         "password": '12345',
-         name: 'Pau',
-         surname: 'Santacreu Badia',
-         id: '5eedd7d09fc452376cf5a471',
-         videos: [ "5eee33f4cc921c1530cfc9f6", "5eee3a7882c7af3c98f0bf10" ] } ];
-     //var tmp = JSON.parse(usuario);
-     console.log (usuario[0]['videos']);
-     */
-    /* 
-    var tmp = {
-        "v2": { 
-            id: "v2", 
-            type: "local"} 
-        };
-     console.log(tmp);   
-     */
+   /*
+    var usuario = [ { 
+        "_id": "5eedd7d09fc452376cf5a471",
+        "email": "pau@caracola.com",
+        "password": '12345',
+        name: 'Pau',
+        surname: 'Santacreu Badia',
+        id: '5eedd7d09fc452376cf5a471',
+        videos: [ "5eee33f4cc921c1530cfc9f6", "5eee3a7882c7af3c98f0bf10" ] } ];
+    //var tmp = JSON.parse(usuario);
+    console.log (usuario[0]['videos']);
+    */
+   /* 
+   var tmp = {
+       "v2": { 
+           id: "v2", 
+           type: "local"} 
+       };
+    console.log(tmp);   
+    */
 
     ////// end test /////
     MongoClient.connect(url, (err, _db) => {
@@ -72,9 +72,10 @@ var init = () => {
             db = _db;
         }
     });
-
 };
 init();
+
+
 
 /*** db rellenado*/
 /*
@@ -214,45 +215,45 @@ app.use(function (req, res, next) {
         /*
         if(!ObjectID.isValid(_token)) res.send(401, 'Invalid token.');
         */
-        ///////////////////////////// nuevo //////////////////////////////////
-        jwt.verify(_token, JWT_Secret, (err, decoded) => {
+       ///////////////////////////// nuevo //////////////////////////////////
+       jwt.verify(_token, JWT_Secret, (err, decoded) => {      
             if (err) {
                 res.send(401, 'Token not valid.');
             } else {
                 //console.log('id_user::');
                 //console.log(decoded._id);
                 _idUser = decoded._id;
-                if (!ObjectID.isValid(_idUser)) res.send(401, 'Invalid token.');
+                if(!ObjectID.isValid(_idUser)) res.send(401, 'Invalid token.');
                 db.collection('users').findOne(
                     { _id: ObjectID.createFromHexString(_idUser) },
-                    (err, doc) => {
-                        if (err) res.send(500);
-                        else if (!doc) res.send(401, 'user and token not valid');
-                        else next();
+                        (err, doc) => {
+                            if (err) res.send(500);
+                                else if (!doc) res.send(401, 'user and token not valid');
+                            else next();                
                     });
                 //next();
             }
-        });
+         });
        ///////////////////////// fin nuevo /////////////////////////////////
        /////////////// test ////////////////////////////////////////////////
        /*
        //JWT.verify(req.cookies['token'], 'YOUR_SECRET', function(err, decodedToken) {
        // if(err) { /* handle token err */ }
-    // else {
-    //  req.userId = decodedToken.id;   // Add to req object
-    //  next();
-    // }
-    //});
-    ///////////// end test /////////////////////////////////////////////
-
-    /*db.collection('users').findOne(
-         { _id: ObjectID.createFromHexString(_token) },
-         (err, doc) => {
-             if (err) res.send(500);
-             else if (!doc) res.send(401, 'Invalid token');
-             else next();                
-         });
-         */
+       // else {
+       //  req.userId = decodedToken.id;   // Add to req object
+       //  next();
+       // }
+      //});
+       ///////////// end test /////////////////////////////////////////////
+       
+       /*db.collection('users').findOne(
+            { _id: ObjectID.createFromHexString(_token) },
+            (err, doc) => {
+                if (err) res.send(500);
+                else if (!doc) res.send(401, 'Invalid token');
+                else next();                
+            });
+            */
     //}
 });
 
@@ -273,11 +274,11 @@ app.post('/myvideos/sessions', function (req, res) {
                 if (err) res.send(500);
                 else if (!doc) res.send(401);
                 else {
-                    let payload = { "_id": doc._id.toHexString() };
-                    let _token = jwt.sign(payload, JWT_Secret, { noTimestamp: true, expiresIn: '1h' });
+                    let payload = { "_id" : doc._id.toHexString()};
+                    let _token = jwt.sign( payload,JWT_Secret,  { noTimestamp:true, expiresIn: '1h' });
                     res.send({
                         userId: doc._id.toHexString(),
-                        token: _token
+                        token : _token
                     });
                 }
                 //else res.send({
@@ -303,8 +304,8 @@ app.get('/myvideos/users', function (req, res) {
         if (err) res.send(500);
         else res.send(docs.map((doc) => {
             var user = {
-                id: doc._id.toHexString(),
-                email: doc.email,
+                id: doc._id.toHexString(), 
+                email: doc.email, 
                 name: doc.name,
                 surname: doc.surname
             };
@@ -406,78 +407,6 @@ app.delete('/myvideos/users/:userId', function (req, res) {
 //*************videos **************/
 
 /** OK Actualizado */
-/** revisado owner */
-app.get('/myvideos/users/:userId/videos', function (req, res) {
-    console.log('GET /myvideos/user/' + req.params.userId + '/videos');
-    var userId = req.params.userId;
-    var _query = req.query.q;
-    if (!userId) res.send(400, 'Missing parameter');
-    else {
-        _user = userId.trim();
-        console.log(_user);
-        //db.collection('users').findOne({ _id: ObjectID.createFromHexString(userId) }, (err, doc) => {
-        db.collection('users').find({ _id: ObjectID.createFromHexString(userId) }).toArray((err, doc) => {
-            if (err) res.send(500);
-            else if (!doc) res.send(404, 'User not found');
-            else {
-                if (!_user) {
-                    res.send(400, 'Missing data');
-                } else {
-                    _videos = doc[0]['videos'];
-
-                    if (typeof _videos !== 'undefined') {
-                        _videosTmp = [];
-                        for (let _video of _videos) {
-                            _videosTmp.push(_video['id']);
-                        }
-                        var _parametros = {
-                            _id: { $in: _videosTmp }  //{$in:_videos}                        
-                        };
-                    }
-
-                    if (_query) {
-                        _parametros.title = { '$regex': _query }
-                    }
-                    console.log(_parametros);
-
-                    console.log('videos: ');
-                    console.log(doc);
-                    //console.log(doc['videos']);
-                    console.log(doc[0]['videos']);
-                    console.log(typeof (doc[0]['videos']));
-                    if (typeof _videos !== 'undefined') {
-                        db.collection('videos').find(_parametros).toArray((err, docs) => {
-                            if (err) res.send(500);
-                            else res.send(docs.map((doc) => {
-                                //console.log(docs);
-                                var video = {
-                                    id: doc._id.toHexString(),
-                                    type: doc.type,
-                                    url: doc.url,
-                                    title: doc.title,
-                                    description: doc.description,
-                                    thumbnail: doc.thumbnail,
-                                    tags: doc.tags,
-                                    duration: doc.duration,
-                                    date: doc.date,
-                                    width: doc.width,
-                                    height: doc.height
-                                };
-                                return video;
-                            }));
-                        });
-                    } else {
-                        return [];
-                    }
-
-
-                }
-            } //end else
-        });
-    } //end else
-});
-
-/* seguridad 
  app.get('/myvideos/users/:userId/videos', function (req, res) {
     console.log('GET /myvideos/user/' + req.params.userId + '/videos');
     var userId = req.params.userId;
@@ -495,13 +424,9 @@ app.get('/myvideos/users/:userId/videos', function (req, res) {
                     res.send(400, 'Missing data');
                 } else {
                     _videos = doc[0]['videos'];
-                    _parametros = {};
-                    if (_videos!='undefined') {
-                        var _parametros = {                                
-                            _id: {$in:_videos}                        
-                        };
-                    }
-                    
+                    var _parametros = {                                
+                        _id: {$in:_videos}                        
+                    };
                     if (_query) {
                         _parametros.title = {'$regex': _query}
                     }
@@ -541,12 +466,10 @@ app.get('/myvideos/users/:userId/videos', function (req, res) {
         });
     } //end else
 });
-*/
 
 
 
 /** OK ACtualizado */
-/** Pasado a isOwner */
 app.post('/myvideos/users/:userId/videos', function (req, res) {
     console.log('POST /myvideos/user/' + req.params.userId + '/videos');
     var userId = req.params.userId;
@@ -572,25 +495,20 @@ app.post('/myvideos/users/:userId/videos', function (req, res) {
                     if (req.body.height) video.height = req.body.height;
                     db.collection('videos').insertOne(video, (err, result) => {
                         if (err) res.send(500);
-                        else {
+                        else  {
                             ////////////////////////////////////
-                            _videoId = result.insertedId.toHexString();
+                            _videoId =result.insertedId.toHexString();
                             video.id = _videoId;
-                            var _videoAdd = {
-                                id: result.insertedId,
-                                isOwner: 1
-                            }
                             db.collection('users').updateOne(
                                 { _id: ObjectID.createFromHexString(userId) },
-                                { $addToSet: { videos: _videoAdd } },
-                                //{ $addToSet: { videos : result.insertedId } },
+                                { $addToSet: { videos : result.insertedId } },
                                 (err, doc) => {
-                                    if (err) res.send(500, err);
+                                    if (err) res.send(500, err);                                    
                                     res.send(video);
                                 });
                             ///////////////////////////////////
-
-
+                           
+                            
                         }//res.send(result);
                     });
 
@@ -602,7 +520,6 @@ app.post('/myvideos/users/:userId/videos', function (req, res) {
 
 
 /*OK Actualizado */
-/* no necesita revision de owner */
 app.get('/myvideos/users/:userId/videos/:videoId', function (req, res) {
     console.log('GET /myvideos/users/' + req.params.userId + '/videos/' +
         req.params.videoId);
@@ -641,37 +558,23 @@ app.get('/myvideos/users/:userId/videos/:videoId', function (req, res) {
             } //end else
         });
     }
-});
+});   
 
 
 /** OK Actuallzado */
-/** revisado con Owner */
 app.put('/myvideos/users/:userId/videos/:videoId', function (req, res) {
     console.log('PUT /myvideos/users/' + req.params.userId + '/videos/' +
         req.params.videoId);
     var userId = req.params.userId;
     var videoId = req.params.videoId;
-    if (!userId || !videoId || videoId == 'undefined') res.send(400, 'Missing parameter');
+    if (!userId || !videoId || videoId=='undefined' ) res.send(400, 'Missing parameter');
     else {
-        _videoId = ObjectID.createFromHexString(videoId);//'5ef705891921a928cc3b3e2b'
-        console.log('aqui entro');
-        console.log(_videoId);
-        /*  OK FUNCIONA
-        db.collection("users").find({ "videos.id": _videoId}).toArray(function(err, result) {
-           if (err) throw err;
-           console.log(result);            
-         });
-         /*
-       */
-
-        db.collection('users').findOne({
-            _id: ObjectID.createFromHexString(userId), 'videos.id': _videoId
-        }, (err, doc) => {
-            if (err) res.send(err);
+        _videoId = [ObjectID.createFromHexString(videoId)];//5eee3a7882c7af3c98f0bf10
+        db.collection('users').findOne({ 
+            _id: ObjectID.createFromHexString(userId), videos: {$in: _videoId} }, (err, doc) => {
+            if (err) res.send(500);
             else if (!doc) res.send(404, 'User or Video not found');
             else {
-                console.log('else');
-                console.log(doc);
                 var video = {
                     type: req.body.type,
                     url: req.body.url, title: req.body.title, date: Date.now()
@@ -690,7 +593,6 @@ app.put('/myvideos/users/:userId/videos/:videoId', function (req, res) {
                     });
             }
         });
-
     }
 });
 
@@ -698,7 +600,6 @@ app.put('/myvideos/users/:userId/videos/:videoId', function (req, res) {
 
 /**Ok Actualizado */
 /** elimina un video tb de las playlists que está asociado */
-/** revisado para isOwner */
 app.delete('/myvideos/users/:userId/videos/:videoId', function (req, res) {
     console.log('DELETE /myvideos/users/' + req.params.userId + '/videos/' +
         req.params.videoId);
@@ -706,65 +607,40 @@ app.delete('/myvideos/users/:userId/videos/:videoId', function (req, res) {
     var videoId = req.params.videoId;
     if (!userId || !videoId) res.send(400, 'Missing parameter');
     else {
-        _videoId = ObjectID.createFromHexString(videoId);//5eee3a7882c7af3c98f0bf10
-        db.collection("users").findOne({
-            _id: ObjectID.createFromHexString(userId), 'videos.id': _videoId
+        _videoId = [ObjectID.createFromHexString(videoId)];//5eee3a7882c7af3c98f0bf10
+        db.collection('users').findOne({
+            _id: ObjectID.createFromHexString(userId), videos: { $in: _videoId }
         }, (err, doc) => {
             if (err) res.send(500);
             else if (!doc) res.send(404, 'User or Video not found');
             else {
-                //console.log('resultado es owner');
-                //console.log(doc);
-                //console.log(doc['videos']);
-                _videos = doc['videos'];
-                _isOwner =0;
-                for (let _video of _videos) {
-                    if(JSON.stringify(_video['id'])==JSON.stringify(_videoId)) {
-                        //console.log('encontrado');
-                        //console.log(_video['isOwner']);
-                        _isOwner = _video['isOwner'];
-                        break;   
-                    }
-                }
                 db.collection('users').updateOne(
                     { _id: ObjectID.createFromHexString(userId) },
-                    { $pull: {'videos': {id: ObjectID.createFromHexString(videoId)} } },
-                    //{ $pull: { 'videos.id': ObjectID.createFromHexString(videoId) } },
-                    {multi: true},
+                    { $pull: { videos: ObjectID.createFromHexString(videoId) } },
                     (err, doc) => {
                         if (err) res.send(500, err);
                         //else res.send(204);
                         else {
-                            console.log('encontrado en  usuarios-videos y eliminado');
-                            // eliminamos if user = Owner 
-                            if(_isOwner==1) {
-                                db.collection('playlists').update(
-                                    {},
-                                    { $pull: { idVideos: { id: ObjectID.createFromHexString(videoId) } } },
-                                    (err, doc) => {
-                                        if (err) res.send(500, err);
-                                        else {
-                                            //////////////
-                                            console.log('borrado de playlist-videos');
-                                            console.log(doc);
-                                            db.collection('videos').remove({ _id: ObjectID.createFromHexString(videoId) },
-                                                (err, doc) => {
-                                                    if (err) res.send(500, err);
-                                                    else res.send(204);
-                                                }
-                                            );
-                                            //////////////////////
-                                        }
-                                    });
-                                } else {
-                                    console.log('solo se desasocia de la lista de videos. No lo borra');
-                                    res.send (204);
-                                }
+                            db.collection('playlists').update(
+                                {},
+                                { $pull: { idVideos: { id: ObjectID.createFromHexString(videoId) } } },
+                                (err, doc) => {
+                                    if (err) res.send(500, err);
+                                    else {
+                                        //////////////
+                                        db.collection('videos').remove({ _id: ObjectID.createFromHexString(videoId) },
+                                            (err, doc) => {
+                                                if (err) res.send(500, err);
+                                                else res.send(204);
+                                            }
+                                        );
+                                        //////////////////////
+                                    }
+                                });
 
                         } // end else
 
                     });
-                    
 
             }
         });
@@ -778,15 +654,16 @@ app.delete('/myvideos/users/:userId/videos/:videoId', function (req, res) {
 // playlists
 // ********************* *****************/
 /** OK actualizado */
-app.get('/myvideos/users/:userId/playlists', function (req, res) {
-    console.log('GET /myvideos/user/' + req.params.userId + '/playlists');
+    app.get('/myvideos/users/:userId/playlists', function (req, res) {
+    console.log('GET /myvideos/user/' + req.params.userId + '/playlists');    
     var userId = req.params.userId;
     var _query = req.query.q;
     if (!userId) res.send(400, 'Missing parameter');
     else {
         _user = userId.trim();
         console.log(_user);
-        db.collection('users').find({ _id: ObjectID.createFromHexString(userId) }).toArray((err, doc) => {
+        //db.collection('users').findOne({ _id: ObjectID.createFromHexString(userId) }, (err, doc) => {
+        db.collection('users').find({ _id: ObjectID.createFromHexString(userId) }).toArray((err, doc) => {    
             if (err) res.send(500);
             else if (!doc) res.send(404, 'User not found');
             else {
@@ -794,35 +671,28 @@ app.get('/myvideos/users/:userId/playlists', function (req, res) {
                     res.send(400, 'Missing data');
                 } else {
                     _playlists = doc[0]['playlists'];
-                    if (typeof _playlists !== 'undefined') {
-                        var _parametros = {
-                            _id: { $in: _playlists }
-                        }
+                    var _parametros = {                                
+                        _id: {$in:_playlists}                        
                     };
                     if (_query) {
-                        _parametros.title = { '$regex': _query }
+                        _parametros.title = {'$regex': _query}
                     }
-                    if (typeof _playlists !== 'undefined') {
-                        db.collection('playlists').find(_parametros).toArray((err, docs) => {
+                        db.collection('playlists').find(_parametros).toArray((err, docs) => {    
                             if (err) res.send(500);
                             else res.send(docs.map((doc) => {
                                 //console.log(docs);
                                 var playlist = {
-                                    id: doc._id.toHexString(),
+                                    id: doc._id.toHexString(), 
                                     title: doc.title,
-                                    description: doc.description,
-                                    thumbnail: doc.thumbnail,
-                                    date: doc.date,
-                                    count: doc.count
+                                    description:doc.description,
+                                    thumbnail : doc.thumbnail,
+                                    date:doc.date,
+                                    count:doc.count
                                 };
                                 return playlist;
                             }));
                         });
-                    }
-                    else {
-                        return [];
-                    }
-
+                    
 
                 }
             } //end else
@@ -912,7 +782,7 @@ app.get('/myvideos/users/:userId/playlists/:playlistId', function (req, res) {
             } //end else
         });
     }
-
+   
 });
 
 
@@ -925,16 +795,15 @@ app.put('/myvideos/users/:userId/playlists/:playlistId', function (req, res) {
     if (!userId || !playlistId) res.send(400, 'Missing parameter');
     else {
         _playlistId = [ObjectID.createFromHexString(playlistId)];
-        db.collection('users').findOne({
-            _id: ObjectID.createFromHexString(userId), playlists: { $in: _playlistId }
-        }, (err, doc) => {
+        db.collection('users').findOne({ 
+            _id: ObjectID.createFromHexString(userId), playlists: {$in: _playlistId} }, (err, doc) => {
             if (err) res.send(500);
             else if (!doc) res.send(404, 'User or Playlist not found');
             else {
                 var playlist = {
-                    title: req.body.title,
+                    title: req.body.title, 
                     date: Date.now(),
-                    description: req.body.description
+                    description : req.body.description
                 };
                 if (req.body.thumbnail) playlist.thumbnail = req.body.thumbnail;
                 db.collection('playlists').updateOne(
@@ -967,18 +836,18 @@ app.delete('/myvideos/users/:userId/playlists/:playlistId', function (req, res) 
             else {
                 db.collection('users').updateOne(
                     { _id: ObjectID.createFromHexString(userId) },
-                    { $pull: { playlists: ObjectID.createFromHexString(playlistId) } },
+                    { $pull: { playlists : ObjectID.createFromHexString(playlistId) } },
                     (err, doc) => {
                         if (err) res.send(500, err);
                         //else res.send(204);
                         else {
                             ////////////////////////////
                             db.collection('playlists').remove({ _id: ObjectID.createFromHexString(playlistId) },
-                                (err, doc) => {
-                                    if (err) res.send(500, err);
-                                    else res.send(204);
-                                }
-                            );
+                                            (err, doc) => {
+                                                if (err) res.send(500, err);
+                                                else res.send(204);
+                                            }
+                                        );
                             ////////////////////////////
                         }
                     });
@@ -1000,7 +869,7 @@ app.post('/myvideos/users/:userId/playlists/:playlistId/videos', function (req, 
     else {
         _playlistId = [ObjectID.createFromHexString(playlistId)];
         db.collection('users').findOne({
-            _id: ObjectID.createFromHexString(userId), playlists: { $in: _playlistId }
+           _id: ObjectID.createFromHexString(userId), playlists: { $in: _playlistId }
         }, (err, doc) => {
             if (err) res.send(500);
             else if (!doc) res.send(404, 'User or Playlist not found');
@@ -1021,7 +890,7 @@ app.post('/myvideos/users/:userId/playlists/:playlistId/videos', function (req, 
                 var _videoIdAdd = video.id.toString();
                 var _videoTypeAdd = video.type.toString();
                 var _videoAdd = {
-                    id: _videoIdAdd,
+                    id: _videoIdAdd, 
                     type: _videoTypeAdd
                 }
                 /*var _videoAdd = {
@@ -1042,13 +911,13 @@ app.post('/myvideos/users/:userId/playlists/:playlistId/videos', function (req, 
                         else res.send(204);
                     });
                 */
-                db.collection('playlists').updateOne(
-                    { _id: ObjectID.createFromHexString(playlistId) },
-                    { $addToSet: { idVideos: _videoAdd }, $inc: { count: 1 } },
-                    (err, doc) => {
-                        if (err) res.send(500, err);
-                        else res.send(204);
-                    });
+               db.collection('playlists').updateOne(
+                { _id: ObjectID.createFromHexString(playlistId) },
+                { $addToSet: { idVideos: _videoAdd }, $inc: {count:1} },
+                (err, doc) => {
+                    if (err) res.send(500, err);
+                    else res.send(204);
+                });
 
             }
         });
@@ -1082,12 +951,12 @@ app.get('/myvideos/users/:userId/playlists/:playlistId/videos', function (req, r
                         console.log(_idVideos);
                         _idVideosObj = [];
                         for (let _idVideo of _idVideos) {
-                            if (ObjectID.isValid(_idVideo.id)) {
+                            if(ObjectID.isValid(_idVideo.id)) {
                                 console.log('es valido');
                                 console.log(_idVideo.id);
-                                _idVideosObj.push(ObjectID.createFromHexString(_idVideo.id));
+                                _idVideosObj.push (ObjectID.createFromHexString(_idVideo.id));
                             }
-
+                            
                         } //for
                         var _parametros = {
                             _id: { $in: _idVideosObj }
@@ -1137,7 +1006,6 @@ app.get('/myvideos/users/:userId/playlists/:playlistId/videos', function (req, r
 
 
 /** Ok actualizado revisar si borrar un video definitivamente / al igual que la playlist */
-/** ok isOwner */
 app.delete('/myvideos/users/:userId/playlists/:playlistId/videos/:videoId', function (req, res) {
     console.log('GET /myvideos/users/' + req.params.userId + '/playlists/' + req.params.playlistId + '/videos/' + req.params.videoId);
     var userId = req.params.userId;
@@ -1152,16 +1020,12 @@ app.delete('/myvideos/users/:userId/playlists/:playlistId/videos/:videoId', func
             if (err) res.send(500);
             else if (!doc) res.send(404, 'User or Playlists not found');
             else {
-                db.collection('playlists').update(
+                db.collection('playlists').updateOne(
                     { _id: ObjectID.createFromHexString(playlistId) },
-                    { $pull: { idVideos: { id: videoId } } },
-                    { multi: true },
+                    { $pull: { idVideos : ObjectID.createFromHexString(videoId) } },
                     (err, doc) => {
                         if (err) res.send(500, err);
-                        else {
-                            //console.log(doc);
-                            res.send(204);
-                        }
+                        else res.send(204);
                     });
 
             }
@@ -1169,158 +1033,6 @@ app.delete('/myvideos/users/:userId/playlists/:playlistId/videos/:videoId', func
 
     }
 });
-
-/// compartir
-/** no funciona bien
-app.get('/myvideos/users/:userId/videos/:videoId/share', function (req, res) {
-    console.log('GET /myvideos/users/' + req.params.userId + '/videos/' +
-        req.params.videoId+'/share');
-    var userId = req.params.userId;
-    var videoId = req.params.videoId;
-    console.log('video' + videoId);
-    if (!userId || !videoId) res.send(400, 'Missing parameter');
-    else {
-        db.collection('users').findOne({ _id: ObjectID.createFromHexString(userId) }, (err, doc) => {
-            if (err) res.send(500);
-            else if (!doc) res.send(404, 'User not found');
-            else {
-                console.log('share video');
-                ///////////////////////////////////////////////////////
-                _videoAdd =  {
-                    id :  ObjectID.createFromHexString(videoId),
-                    isOwner : 0
-                }
-                    _errores = true;
-                //////////////////////////////////
-                var q = async.queue(function (item, callback) {
-                    // code for your update
-                    console.log('videoADD');
-                    console.log(_videoAdd);
-                    db.collection('users').update(
-                        { _id: item['_id'] },
-                        { $addToSet: { videos: _videoAdd } },
-                        {multi:true},
-                        (err, doc) => {
-                            if (err) res.send(500, err);
-                            else {
-                                console.log('no errores');
-                                _errores= false;
-                                //res.send(204);
-                            }                               
-                    });
-                  }, Infinity);
-                ///////////////////////////////////    
-                    db.collection('users').find({ _id:{$nin:[ObjectID.createFromHexString(userId)]} }).forEach(function(err,item){
-                        if (err) throw err;
-                        if (item) q.Push(item); // dispatching doc to async.queue
-                   
-                    })
-
-                    q.drain = function() {
-                        if (cursor.isClosed()) {
-                          console.log('all items have been processed');
-                          //db.close();
-                        }
-                      }
-                   
-                ///////////////////////////////////////////////////////
-            } //end else
-        });
-    }
-});
-*/
-
-app.get('/myvideos/users/:userId/videos/:videoId/share', function (req, res) {
-    console.log('GET /myvideos/users/' + req.params.userId + '/videos/' +
-        req.params.videoId+'/share');
-    var userId = req.params.userId;
-    var videoId = req.params.videoId;
-    console.log('video' + videoId);
-    if (!userId || !videoId) res.send(400, 'Missing parameter');
-    else {
-        db.collection('users').findOne({ _id: ObjectID.createFromHexString(userId) }, (err, doc) => {
-            if (err) res.send(500);
-            else if (!doc) res.send(404, 'User not found');
-            else {
-                //console.log('share video');
-                ///////////////////////////////////////////////////////
-                _videoAdd =  {
-                    id :  ObjectID.createFromHexString(videoId),
-                    isOwner : 0
-                }
-                    _errores = true;
-                    cursor = db.collection('users').find({ _id:{$nin:[ObjectID.createFromHexString(userId)]} }).forEach(function(item){
-                        db.collection('users').update(
-                            { _id: item['_id'] },
-                            { $addToSet: { videos: _videoAdd } },
-                            {multi:true},
-                            (err, doc) => {
-                                if (err) res.send(500, err);
-                                else {
-                                    //console.log('no errores');
-                                    //res.send(204);
-                                }                               
-                        });
-                    
-                    });
-                    res.send(204)
-                   
-                ///////////////////////////////////////////////////////
-            } //end else
-        });
-    }
-});
-
-
-
-/* seguridad 
-app.get('/myvideos/users/:userId/videos/:videoId/share', function (req, res) {
-    console.log('GET /myvideos/users/' + req.params.userId + '/videos/' +
-        req.params.videoId+'/share');
-    var userId = req.params.userId;
-    var videoId = req.params.videoId;
-    console.log('video' + videoId);
-    if (!userId || !videoId) res.send(400, 'Missing parameter');
-    else {
-        db.collection('users').findOne({ _id: ObjectID.createFromHexString(userId) }, (err, doc) => {
-            if (err) res.send(500);
-            else if (!doc) res.send(404, 'User not found');
-            else {
-                console.log('share video');
-                ///////////////////////////////////////////////////////
-                _videoAdd =  {
-                    id :  ObjectID.createFromHexString(videoId),
-                    isOwner : 0
-                }
-                    _errores = true;
-                    db.collection('users').find({ _id:{$nin:[ObjectID.createFromHexString(userId)]} }).forEach(function(item){
-                        //if (err) res.send(500, err);
-                        //else {
-                        console.log('dentro');
-                        console.log(item);
-                        console.log(item['_id']);
-                        db.collection('users').update(
-                            { _id: item['_id'] },
-                            { $addToSet: { videos: _videoAdd } },
-                            {multi:true},
-                            (err, doc) => {
-                                if (err) res.send(500, err);
-                                else {
-                                    console.log('no errores');
-                                    _errores= false;
-                                    //res.send(204);
-                                }                               
-                        });
-                   
-                    })
-                   
-                ///////////////////////////////////////////////////////
-            } //end else
-        });
-    }
-});
-*/
-
 
 ////////////////////////
 app.listen(8087);
